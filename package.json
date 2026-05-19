@@ -1,0 +1,18 @@
+{
+  "name": "fun-20260519-pulse-poem",
+  "version": "1.0.0",
+  "description": "Turn a short line of text into a playable pocket rhythm.",
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 5173",
+    "test": "node tests/pulse.test.js"
+  },
+  "keywords": [
+    "static-site",
+    "rhythm",
+    "haptics",
+    "web-audio"
+  ],
+  "author": "",
+  "license": "MIT"
+}

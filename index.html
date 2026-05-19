@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pulse Poem</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="studio" aria-labelledby="title">
+        <div class="masthead">
+          <div>
+            <p class="eyebrow">Pocket rhythm maker</p>
+            <h1 id="title">Pulse Poem</h1>
+          </div>
+          <div class="status-pill" id="supportStatus">Checking device</div>
+        </div>
+
+        <canvas id="pulseCanvas" width="920" height="360" aria-label="Pulse visualization"></canvas>
+
+        <div class="workbench">
+          <label class="input-panel">
+            <span>Line</span>
+            <textarea id="poemInput" maxlength="160" spellcheck="true"></textarea>
+          </label>
+
+          <div class="controls" aria-label="Controls">
+            <div class="mode-tabs" id="modeTabs" role="tablist" aria-label="Rhythm mode">
+              <button type="button" data-mode="calm">Calm</button>
+              <button type="button" data-mode="bright" class="is-active">Bright</button>
+              <button type="button" data-mode="drumline">Drumline</button>
+            </div>
+
+            <div class="switch-row">
+              <label>
+                <input id="soundToggle" type="checkbox" checked />
+                <span>Sound</span>
+              </label>
+              <label>
+                <input id="vibrateToggle" type="checkbox" checked />
+                <span>Vibration</span>
+              </label>
+            </div>
+
+            <div class="button-grid">
+              <button type="button" id="generateButton">Generate</button>
+              <button type="button" id="playButton" class="primary">Play</button>
+              <button type="button" id="sampleButton">Sample</button>
+              <button type="button" id="copyButton">Copy score</button>
+            </div>
+          </div>
+        </div>
+
+        <section class="readout" aria-label="Generated rhythm">
+          <div>
+            <span>Pulses</span>
+            <strong id="pulseCount">0</strong>
+          </div>
+          <div>
+            <span>Length</span>
+            <strong id="durationReadout">0.0s</strong>
+          </div>
+          <div>
+            <span>Signature</span>
+            <strong id="signatureReadout">-</strong>
+          </div>
+        </section>
+
+        <div class="timeline" id="timeline" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
