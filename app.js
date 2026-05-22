@@ -13,6 +13,7 @@ const elements = {
   generateButton: document.querySelector("#generateButton"),
   playButton: document.querySelector("#playButton"),
   sampleButton: document.querySelector("#sampleButton"),
+  soundTestButton: document.querySelector("#soundTestButton"),
   copyButton: document.querySelector("#copyButton"),
   soundToggle: document.querySelector("#soundToggle"),
   vibrateToggle: document.querySelector("#vibrateToggle"),
@@ -37,6 +38,10 @@ let activePulse = -1;
 let playbackTimers = [];
 let audioContext;
 let sampleIndex = 0;
+let fallbackAudioNoted = false;
+
+const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+const fallbackTickUrls = new Map();
 
 function getCanvasContext() {
   const canvas = elements.canvas;
@@ -138,8 +143,9 @@ function renderSupportStatus(message) {
     elements.supportStatus.textContent = message;
     return;
   }
+  const audio = AudioContextCtor ? "web audio" : typeof Audio === "function" ? "html audio" : "visual only";
   const vibration = "vibrate" in navigator ? "vibration ready" : "visual rhythm";
-  elements.supportStatus.textContent = vibration;
+  elements.supportStatus.textContent = `${audio} + ${vibration}`;
 }
 
 function setActivePulse(index) {
@@ -167,10 +173,28 @@ function resetPlayback() {
 }
 
 function ensureAudioContext() {
+  if (!AudioContextCtor) {
+    return null;
+  }
   if (!audioContext) {
-    audioContext = new AudioContext();
+    audioContext = new AudioContextCtor();
   }
   return audioContext;
+}
+
+async function warmAudio() {
+  if (!elements.soundToggle.checked || !AudioContextCtor) {
+    return;
+  }
+
+  try {
+    const context = ensureAudioContext();
+    if (context?.state === "suspended") {
+      await context.resume();
+    }
+  } catch {
+    renderSupportStatus(typeof Audio === "function" ? "using html audio" : "sound unavailable");
+  }
 }
 
 function playTick(pulse) {
@@ -178,18 +202,94 @@ function playTick(pulse) {
     return;
   }
 
-  const context = ensureAudioContext();
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  const now = context.currentTime;
-  oscillator.type = pulse.accent ? "triangle" : "sine";
-  oscillator.frequency.setValueAtTime(pulse.pitch, now);
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.12 + pulse.intensity * 0.16, now + 0.012);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + Math.min(0.18, pulse.duration / 1000));
-  oscillator.connect(gain).connect(context.destination);
-  oscillator.start(now);
-  oscillator.stop(now + Math.min(0.22, pulse.duration / 1000 + 0.04));
+  try {
+    const context = ensureAudioContext();
+    if (context) {
+      if (context.state === "suspended") {
+        playFallbackTick(pulse);
+        return;
+      }
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const now = context.currentTime;
+      oscillator.type = pulse.accent ? "triangle" : "sine";
+      oscillator.frequency.setValueAtTime(pulse.pitch, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.12 + pulse.intensity * 0.16, now + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + Math.min(0.18, pulse.duration / 1000));
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(now);
+      oscillator.stop(now + Math.min(0.22, pulse.duration / 1000 + 0.04));
+      return;
+    }
+  } catch {
+    audioContext = null;
+  }
+
+  playFallbackTick(pulse);
+}
+
+function playFallbackTick(pulse) {
+  if (typeof Audio !== "function") {
+    renderSupportStatus("sound unavailable");
+    return;
+  }
+
+  if (!fallbackAudioNoted) {
+    renderSupportStatus("using html audio");
+    fallbackAudioNoted = true;
+  }
+
+  const audio = new Audio(getFallbackTickUrl(pulse));
+  audio.volume = Math.min(0.75, 0.18 + pulse.intensity * 0.42);
+  audio.play().catch(() => {
+    renderSupportStatus("tap again for sound");
+  });
+}
+
+function getFallbackTickUrl(pulse) {
+  const key = `${Math.round(pulse.pitch / 20) * 20}-${Math.round(pulse.duration / 20) * 20}`;
+  if (!fallbackTickUrls.has(key)) {
+    fallbackTickUrls.set(key, URL.createObjectURL(buildTickWave(pulse.pitch, pulse.duration)));
+  }
+  return fallbackTickUrls.get(key);
+}
+
+function buildTickWave(frequency, durationMs) {
+  const sampleRate = 11025;
+  const duration = Math.min(0.22, Math.max(0.07, durationMs / 1000));
+  const sampleCount = Math.floor(sampleRate * duration);
+  const bytes = new ArrayBuffer(44 + sampleCount * 2);
+  const view = new DataView(bytes);
+
+  writeString(view, 0, "RIFF");
+  view.setUint32(4, 36 + sampleCount * 2, true);
+  writeString(view, 8, "WAVE");
+  writeString(view, 12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(view, 36, "data");
+  view.setUint32(40, sampleCount * 2, true);
+
+  for (let index = 0; index < sampleCount; index += 1) {
+    const time = index / sampleRate;
+    const envelope = Math.exp(-16 * time);
+    const sample = Math.sin(2 * Math.PI * frequency * time) * envelope * 0.45;
+    view.setInt16(44 + index * 2, sample * 32767, true);
+  }
+
+  return new Blob([view], { type: "audio/wav" });
+}
+
+function writeString(view, offset, value) {
+  for (let index = 0; index < value.length; index += 1) {
+    view.setUint8(offset + index, value.charCodeAt(index));
+  }
 }
 
 function vibrate(pulse) {
@@ -199,8 +299,9 @@ function vibrate(pulse) {
   navigator.vibrate(Math.min(180, pulse.duration));
 }
 
-function playPattern() {
+async function playPattern() {
   resetPlayback();
+  await warmAudio();
   elements.playButton.disabled = true;
   elements.playButton.textContent = "Playing";
 
@@ -220,6 +321,19 @@ function playPattern() {
       renderSupportStatus("played once");
     }, pattern.totalDuration + 260)
   );
+}
+
+async function testSound() {
+  await warmAudio();
+  const pulse = pattern.pulses[0];
+  renderSupportStatus("testing sound");
+  setActivePulse(pulse.id);
+  playTick(pulse);
+  vibrate(pulse);
+  window.setTimeout(() => {
+    setActivePulse(-1);
+    renderSupportStatus();
+  }, Math.min(420, pulse.duration + 180));
 }
 
 async function copyScore() {
@@ -260,6 +374,7 @@ elements.modeTabs.addEventListener("click", (event) => {
 elements.generateButton.addEventListener("click", regenerate);
 elements.playButton.addEventListener("click", playPattern);
 elements.copyButton.addEventListener("click", copyScore);
+elements.soundTestButton.addEventListener("click", testSound);
 elements.sampleButton.addEventListener("click", () => {
   sampleIndex = (sampleIndex + 1) % samples.length;
   elements.input.value = samples[sampleIndex];

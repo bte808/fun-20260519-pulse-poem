@@ -13,7 +13,9 @@ Pulse Poem borrows only the broad idea of tactile browser feedback. The code, de
 - Converts words, punctuation, and rough syllable counts into a short pulse pattern.
 - Plays the pattern as a canvas animation.
 - Adds optional click sounds through the Web Audio API.
+- Falls back to generated HTML audio ticks when Web Audio is unavailable.
 - Uses the Vibration API on supported mobile browsers.
+- Offers a `Test sound` button so the first-click audio state is obvious.
 - Copies a readable tap score for sharing.
 - Stores the current text and mode in the URL hash, so a rhythm can be reopened later.
 
@@ -49,7 +51,8 @@ http://localhost:5173
 2. Pick Calm, Bright, or Drumline.
 3. Press Generate.
 4. Press Play.
-5. Copy the score or keep editing the line.
+5. If the browser is quiet, press Test sound to confirm audio permissions or fallback support.
+6. Copy the score or keep editing the line.
 
 ## Checks
 
