@@ -166,6 +166,10 @@ export function patternToTapScore(pattern) {
     .join(" | ");
 }
 
+export function patternToShareText(pattern) {
+  return `${pattern.source}\n${pattern.modeLabel}: ${pattern.signature}\n${patternToTapScore(pattern)}`;
+}
+
 export function encodeShareState(text, mode) {
   const params = new URLSearchParams();
   params.set("text", normalizeText(text));

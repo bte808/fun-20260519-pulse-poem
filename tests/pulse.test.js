@@ -4,6 +4,7 @@ import {
   decodeShareState,
   encodeShareState,
   estimateSyllables,
+  patternToShareText,
   patternToTapScore,
   tokenize
 } from "../src/pulse.js";
@@ -36,6 +37,11 @@ assert.deepEqual(tokenize("a -- b").slice(0, 3), ["a", "--", "b"]);
 const score = patternToTapScore(pattern);
 assert.match(score, /storm/);
 assert.match(score, /ms/);
+
+const shareText = patternToShareText(pattern);
+assert.match(shareText, /^storm glass, tiny robot!/);
+assert.match(shareText, /Bright:/);
+assert.match(shareText, /THUMP|tap|tick/);
 
 const decoded = decodeShareState(encodeShareState("hello pulse", "calm"));
 assert.equal(decoded.text, "hello pulse");

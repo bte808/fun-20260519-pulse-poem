@@ -4,7 +4,7 @@ import {
   DEFAULT_TEXT,
   encodeShareState,
   MODES,
-  patternToTapScore
+  patternToShareText
 } from "./src/pulse.js";
 
 const elements = {
@@ -15,6 +15,7 @@ const elements = {
   sampleButton: document.querySelector("#sampleButton"),
   soundTestButton: document.querySelector("#soundTestButton"),
   copyButton: document.querySelector("#copyButton"),
+  downloadButton: document.querySelector("#downloadButton"),
   soundToggle: document.querySelector("#soundToggle"),
   vibrateToggle: document.querySelector("#vibrateToggle"),
   supportStatus: document.querySelector("#supportStatus"),
@@ -337,19 +338,50 @@ async function testSound() {
 }
 
 async function copyScore() {
-  const text = `${pattern.source}\n${pattern.modeLabel}: ${pattern.signature}\n${patternToTapScore(pattern)}`;
+  const text = patternToShareText(pattern);
   try {
     await navigator.clipboard.writeText(text);
     renderSupportStatus("score copied");
   } catch {
-    const helper = document.createElement("textarea");
+    if (!copyWithTextarea(text)) {
+      downloadScoreText(text);
+      renderSupportStatus("score downloaded");
+      return;
+    }
+
+    renderSupportStatus("score copied");
+  }
+}
+
+function copyWithTextarea(text) {
+  const helper = document.createElement("textarea");
+  try {
     helper.value = text;
     document.body.append(helper);
     helper.select();
-    document.execCommand("copy");
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
     helper.remove();
-    renderSupportStatus("score copied");
   }
+}
+
+function downloadScore() {
+  downloadScoreText(patternToShareText(pattern));
+  renderSupportStatus("score downloaded");
+}
+
+function downloadScoreText(text) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `pulse-poem-${new Date().toISOString().slice(0, 10)}.txt`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 500);
 }
 
 function escapeHtml(value) {
@@ -374,6 +406,7 @@ elements.modeTabs.addEventListener("click", (event) => {
 elements.generateButton.addEventListener("click", regenerate);
 elements.playButton.addEventListener("click", playPattern);
 elements.copyButton.addEventListener("click", copyScore);
+elements.downloadButton.addEventListener("click", downloadScore);
 elements.soundTestButton.addEventListener("click", testSound);
 elements.sampleButton.addEventListener("click", () => {
   sampleIndex = (sampleIndex + 1) % samples.length;
