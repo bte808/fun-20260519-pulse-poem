@@ -17,6 +17,7 @@ Pulse Poem borrows only the broad idea of tactile browser feedback. The code, de
 - Uses the Vibration API on supported mobile browsers.
 - Offers a `Test sound` button so the first-click audio state is obvious.
 - Copies a readable tap score for sharing, with a `.txt` download fallback when clipboard access is blocked.
+- Copies a reopenable share link for the current phrase and mode.
 - Stores the current text and mode in the URL hash, so a rhythm can be reopened later.
 
 ## Who it is for
@@ -52,7 +53,7 @@ http://localhost:5173
 3. Press Generate.
 4. Press Play.
 5. If the browser is quiet, press Test sound to confirm audio permissions or fallback support.
-6. Copy the score, download it as a text file, or keep editing the line.
+6. Copy the score, copy a reopenable link, download it as a text file, or keep editing the line.
 
 ## Checks
 

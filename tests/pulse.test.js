@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   createPulsePattern,
+  createShareUrl,
   decodeShareState,
   encodeShareState,
   estimateSyllables,
@@ -46,5 +47,8 @@ assert.match(shareText, /THUMP|tap|tick/);
 const decoded = decodeShareState(encodeShareState("hello pulse", "calm"));
 assert.equal(decoded.text, "hello pulse");
 assert.equal(decoded.mode, "calm");
+
+const shareUrl = createShareUrl("https://example.com/pulse?from=test#old", "hello pulse", "calm");
+assert.equal(shareUrl, "https://example.com/pulse?from=test#text=hello+pulse&mode=calm");
 
 console.log("pulse tests passed");

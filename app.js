@@ -1,5 +1,6 @@
 import {
   createPulsePattern,
+  createShareUrl,
   decodeShareState,
   DEFAULT_TEXT,
   encodeShareState,
@@ -15,6 +16,7 @@ const elements = {
   sampleButton: document.querySelector("#sampleButton"),
   soundTestButton: document.querySelector("#soundTestButton"),
   copyButton: document.querySelector("#copyButton"),
+  copyLinkButton: document.querySelector("#copyLinkButton"),
   downloadButton: document.querySelector("#downloadButton"),
   soundToggle: document.querySelector("#soundToggle"),
   vibrateToggle: document.querySelector("#vibrateToggle"),
@@ -43,6 +45,7 @@ let fallbackAudioNoted = false;
 
 const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
 const fallbackTickUrls = new Map();
+const AUDIO_WARMUP_TIMEOUT_MS = 280;
 
 function getCanvasContext() {
   const canvas = elements.canvas;
@@ -191,7 +194,13 @@ async function warmAudio() {
   try {
     const context = ensureAudioContext();
     if (context?.state === "suspended") {
-      await context.resume();
+      const result = await Promise.race([
+        context.resume().then(() => "ready"),
+        new Promise((resolve) => window.setTimeout(() => resolve("timeout"), AUDIO_WARMUP_TIMEOUT_MS))
+      ]);
+      if (result === "timeout") {
+        renderSupportStatus(typeof Audio === "function" ? "using html audio" : "visual rhythm");
+      }
     }
   } catch {
     renderSupportStatus(typeof Audio === "function" ? "using html audio" : "sound unavailable");
@@ -353,6 +362,16 @@ async function copyScore() {
   }
 }
 
+async function copyShareLink() {
+  const url = createShareUrl(window.location.href, pattern.source, selectedMode);
+  try {
+    await navigator.clipboard.writeText(url);
+    renderSupportStatus("link copied");
+  } catch {
+    renderSupportStatus(copyWithTextarea(url) ? "link copied" : "link unavailable");
+  }
+}
+
 function copyWithTextarea(text) {
   const helper = document.createElement("textarea");
   try {
@@ -406,6 +425,7 @@ elements.modeTabs.addEventListener("click", (event) => {
 elements.generateButton.addEventListener("click", regenerate);
 elements.playButton.addEventListener("click", playPattern);
 elements.copyButton.addEventListener("click", copyScore);
+elements.copyLinkButton.addEventListener("click", copyShareLink);
 elements.downloadButton.addEventListener("click", downloadScore);
 elements.soundTestButton.addEventListener("click", testSound);
 elements.sampleButton.addEventListener("click", () => {

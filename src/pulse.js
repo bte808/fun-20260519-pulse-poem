@@ -177,6 +177,12 @@ export function encodeShareState(text, mode) {
   return `#${params.toString()}`;
 }
 
+export function createShareUrl(baseHref, text, mode) {
+  const url = new URL(baseHref);
+  url.hash = encodeShareState(text, mode);
+  return url.toString();
+}
+
 export function decodeShareState(hash = "") {
   const params = new URLSearchParams(String(hash).replace(/^#/, ""));
   return {
